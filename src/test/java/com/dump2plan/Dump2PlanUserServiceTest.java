@@ -3,8 +3,6 @@ package com.dump2plan;
 import com.dump2plan.user.Dump2PlanUserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -14,15 +12,15 @@ class Dump2PlanUserServiceTest {
 
     @BeforeEach
     void setUp() {
-        userService = new Dump2PlanUserService(new BCryptPasswordEncoder());
+        userService = new Dump2PlanUserService();
     }
 
     @Test
     void findByUsername_existingUser() {
-        var user = userService.findByUsername("alice");
+        var user = userService.findByUsername("user");
         assertNotNull(user);
-        assertEquals("Alice", user.getDisplayName());
-        assertEquals("alice", user.getUsername());
+        assertEquals("User", user.getDisplayName());
+        assertEquals("user", user.getUsername());
     }
 
     @Test
@@ -32,16 +30,16 @@ class Dump2PlanUserServiceTest {
 
     @Test
     void findById_existingUser() {
-        var user = userService.findById("alice");
+        var user = userService.findById("user");
         assertNotNull(user);
-        assertEquals("alice", user.getId());
+        assertEquals("user", user.getId());
     }
 
     @Test
     void findByEmail_existingUser() {
-        var user = userService.findByEmail("alice@dump2plan.local");
+        var user = userService.findByEmail("user@dump2plan.local");
         assertNotNull(user);
-        assertEquals("alice", user.getUsername());
+        assertEquals("user", user.getUsername());
     }
 
     @Test
@@ -50,17 +48,9 @@ class Dump2PlanUserServiceTest {
     }
 
     @Test
-    void loadUserByUsername_existingUser() {
-        var userDetails = userService.loadUserByUsername("alice");
-        assertEquals("alice", userDetails.getUsername());
-        assertTrue(userDetails.getPassword().startsWith("$2a$"));
-        assertTrue(userDetails.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_USER")));
-    }
-
-    @Test
-    void loadUserByUsername_nonExistentUser_throws() {
-        assertThrows(UsernameNotFoundException.class,
-            () -> userService.loadUserByUsername("unknown"));
+    void getDefaultUser_returnsUser() {
+        var user = userService.getDefaultUser();
+        assertNotNull(user);
+        assertEquals("User", user.getDisplayName());
     }
 }

@@ -1,7 +1,6 @@
 package com.dump2plan;
 
 import com.dump2plan.model.Priority;
-import com.dump2plan.model.StructuredPlan;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -23,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * evaluation of plan quality.</p>
  */
 @SpringBootTest(
-    classes = {TestDump2PlanApplication.class, TestSecurityConfiguration.class},
+    classes = TestDump2PlanApplication.class,
     properties = "spring.main.web-application-type=none"
 )
 @ActiveProfiles("it")

@@ -1,6 +1,5 @@
 package com.dump2plan.vaadin;
 
-import com.dump2plan.user.Dump2PlanUser;
 import com.dump2plan.user.Dump2PlanUserService;
 import com.embabel.chat.AssistantMessage;
 import com.embabel.chat.Chatbot;
@@ -20,7 +19,6 @@ import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
-import jakarta.annotation.security.PermitAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +28,6 @@ import java.util.concurrent.TimeUnit;
 
 @Route("")
 @PageTitle("dump2plan")
-@PermitAll
 public class ChatView extends VerticalLayout {
 
     private static final Logger log = LoggerFactory.getLogger(ChatView.class);
@@ -198,7 +195,7 @@ public class ChatView extends VerticalLayout {
             var responseQueue = new ArrayBlockingQueue<Message>(10);
             var outputChannel = new VaadinOutputChannel(
                 UI.getCurrent(), messagesLayout, responseQueue);
-            Dump2PlanUser currentUser = userService.getCurrentUser();
+            var currentUser = userService.getDefaultUser();
             var chatSession = chatbot.createSession(currentUser, outputChannel, null, null);
             sessionData = new SessionData(chatSession, responseQueue);
             VaadinSession.getCurrent().setAttribute(SESSION_DATA_KEY, sessionData);

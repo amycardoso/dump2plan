@@ -1,26 +1,21 @@
 package com.dump2plan.user;
 
 import com.embabel.agent.api.identity.UserService;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
-public class Dump2PlanUserService implements UserService<Dump2PlanUser>, UserDetailsService {
+public class Dump2PlanUserService implements UserService<Dump2PlanUser> {
+
+    private static final Dump2PlanUser DEFAULT_USER =
+        new Dump2PlanUser("User", "user", "USER");
 
     private final Map<String, Dump2PlanUser> users = new ConcurrentHashMap<>();
-    private final String encodedDefaultPassword;
 
-    public Dump2PlanUserService(PasswordEncoder passwordEncoder) {
-        this.encodedDefaultPassword = passwordEncoder.encode("password");
-        users.put("alice", new Dump2PlanUser("Alice", "alice", "USER"));
-        users.put("bob", new Dump2PlanUser("Bob", "bob", "USER"));
+    public Dump2PlanUserService() {
+        users.put(DEFAULT_USER.getUsername(), DEFAULT_USER);
     }
 
     @Override
@@ -41,24 +36,7 @@ public class Dump2PlanUserService implements UserService<Dump2PlanUser>, UserDet
             .orElse(null);
     }
 
-    public Dump2PlanUser getCurrentUser() {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return null;
-        }
-        return users.get(authentication.getName());
-    }
-
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        var user = users.get(username);
-        if (user == null) {
-            throw new UsernameNotFoundException("User not found: " + username);
-        }
-        return org.springframework.security.core.userdetails.User
-                .withUsername(user.getUsername())
-                .password(encodedDefaultPassword)
-                .roles(user.role())
-                .build();
+    public Dump2PlanUser getDefaultUser() {
+        return DEFAULT_USER;
     }
 }
