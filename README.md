@@ -25,7 +25,7 @@ Built with [Embabel Agent Framework](https://docs.embabel.com/embabel-agent/guid
 
 - Java 24+
 - Maven 3.9+
-- An LLM API key (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`)
+- An LLM API key (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `GEMINI_API_KEY`)
 
 ## Quick Start
 
@@ -41,7 +41,16 @@ Open http://localhost:8080 and log in with demo credentials:
 | `alice`  | `password` |
 | `bob`    | `password` |
 
-To use OpenAI instead, set `OPENAI_API_KEY` (the Maven profile auto-activates).
+To use a different LLM provider, set the corresponding env var (the Maven profile auto-activates):
+
+```bash
+# OpenAI
+export OPENAI_API_KEY=your-key
+
+# Google Gemini (free tier available)
+export GEMINI_API_KEY=your-key
+./mvnw spring-boot:run -Dspring.profiles.active=gemini
+```
 
 ## GOAP Planning Chain
 

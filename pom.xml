@@ -146,6 +146,21 @@
             </dependencies>
         </profile>
         <profile>
+            <id>gemini-models</id>
+            <activation>
+                <property>
+                    <name>env.GEMINI_API_KEY</name>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>com.embabel.agent</groupId>
+                    <artifactId>embabel-agent-starter-gemini</artifactId>
+                    <version>${embabel-agent.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
             <id>production</id>
             <dependencies>
                 <dependency>

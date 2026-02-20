@@ -44,3 +44,21 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+
+---
+# Gemini - auto-activated with: export GEMINI_API_KEY=your-key
+spring:
+  config:
+    activate:
+      on-profile: gemini
+
+dump2plan:
+  chat:
+    llm: "gemini-2.5-flash"
+  actors:
+    analyzer:
+      llm: "gemini-2.5-flash"
+    planner:
+      llm: "gemini-2.5-pro"
+    reviewer:
+      llm: "gemini-2.5-pro"
