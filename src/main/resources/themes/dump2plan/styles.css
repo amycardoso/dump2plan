@@ -14,3 +14,132 @@ html {
     font-size: var(--lumo-font-size-xxxl);
     margin-bottom: var(--lumo-space-l);
 }
+
+/* Chat layout */
+.chat-header {
+    margin: 0;
+    padding: var(--lumo-space-m);
+    border-bottom: 1px solid var(--lumo-contrast-10pct);
+}
+
+.chat-scroller {
+    flex: 1;
+    background: var(--lumo-contrast-5pct);
+    border-radius: var(--lumo-border-radius-l);
+    margin: var(--lumo-space-s) 0;
+}
+
+.chat-messages {
+    padding: var(--lumo-space-m);
+}
+
+/* Chat bubbles */
+.chat-bubble-container {
+    max-width: 80%;
+    margin-bottom: var(--lumo-space-s);
+}
+
+.chat-bubble-container.user {
+    margin-left: auto;
+}
+
+.chat-bubble-container.assistant {
+    margin-right: auto;
+}
+
+.chat-bubble {
+    padding: var(--lumo-space-s) var(--lumo-space-m);
+    border-radius: var(--lumo-border-radius-l);
+}
+
+.chat-bubble.user {
+    background: var(--lumo-primary-color-10pct);
+}
+
+.chat-bubble.assistant {
+    background: var(--lumo-contrast-10pct);
+}
+
+.chat-bubble-sender {
+    font-size: var(--lumo-font-size-xs);
+    font-weight: 600;
+    color: var(--lumo-secondary-text-color);
+    display: block;
+    margin-bottom: var(--lumo-space-xs);
+}
+
+.chat-bubble-text {
+    font-size: var(--lumo-font-size-m);
+    line-height: var(--lumo-line-height-m);
+}
+
+.chat-bubble-error {
+    color: var(--lumo-error-text-color);
+    padding: var(--lumo-space-s);
+    font-size: var(--lumo-font-size-s);
+}
+
+/* Plan renderer */
+.plan-renderer {
+    padding: var(--lumo-space-m);
+}
+
+.plan-task {
+    display: flex;
+    align-items: center;
+    gap: var(--lumo-space-s);
+    padding: var(--lumo-space-xs) 0;
+    border-bottom: 1px solid var(--lumo-contrast-5pct);
+}
+
+.plan-task-title {
+    flex: 1;
+}
+
+.plan-task-effort {
+    font-size: var(--lumo-font-size-s);
+    color: var(--lumo-secondary-text-color);
+}
+
+.priority-badge {
+    font-size: var(--lumo-font-size-xs);
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: var(--lumo-border-radius-s);
+}
+
+.priority-critical {
+    color: var(--lumo-error-text-color);
+    background: var(--lumo-error-color-10pct);
+}
+
+.priority-high {
+    color: hsl(30, 80%, 45%);
+    background: hsl(30, 80%, 95%);
+}
+
+.priority-medium {
+    color: var(--lumo-primary-text-color);
+    background: var(--lumo-primary-color-10pct);
+}
+
+.priority-low {
+    color: var(--lumo-secondary-text-color);
+    background: var(--lumo-contrast-5pct);
+}
+
+.plan-milestone {
+    border: 1px solid var(--lumo-contrast-10pct);
+    border-radius: var(--lumo-border-radius-m);
+    margin-bottom: var(--lumo-space-s);
+}
+
+/* Export buttons */
+.export-buttons {
+    padding: var(--lumo-space-s) 0;
+}
+
+/* Chat input */
+.chat-input {
+    font-size: var(--lumo-font-size-m);
+}
