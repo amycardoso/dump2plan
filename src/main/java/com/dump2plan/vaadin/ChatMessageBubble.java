@@ -13,7 +13,9 @@ import org.commonmark.renderer.html.HtmlRenderer;
 public class ChatMessageBubble extends Div {
 
     private static final Parser MARKDOWN_PARSER = Parser.builder().build();
-    private static final HtmlRenderer HTML_RENDERER = HtmlRenderer.builder().build();
+    private static final HtmlRenderer HTML_RENDERER = HtmlRenderer.builder()
+        .escapeHtml(true)
+        .build();
 
     private ChatMessageBubble(String senderName, String text, boolean isUser) {
         addClassName("chat-bubble-container");

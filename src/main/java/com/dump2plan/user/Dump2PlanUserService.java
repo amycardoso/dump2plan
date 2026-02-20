@@ -15,10 +15,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Dump2PlanUserService implements UserService<Dump2PlanUser>, UserDetailsService {
 
     private final Map<String, Dump2PlanUser> users = new ConcurrentHashMap<>();
-    private final PasswordEncoder passwordEncoder;
+    private final String encodedDefaultPassword;
 
     public Dump2PlanUserService(PasswordEncoder passwordEncoder) {
-        this.passwordEncoder = passwordEncoder;
+        this.encodedDefaultPassword = passwordEncoder.encode("password");
         users.put("alice", new Dump2PlanUser("Alice", "alice", "USER"));
         users.put("bob", new Dump2PlanUser("Bob", "bob", "USER"));
     }
@@ -57,7 +57,7 @@ public class Dump2PlanUserService implements UserService<Dump2PlanUser>, UserDet
         }
         return org.springframework.security.core.userdetails.User
                 .withUsername(user.getUsername())
-                .password(passwordEncoder.encode("password"))
+                .password(encodedDefaultPassword)
                 .roles(user.role())
                 .build();
     }
