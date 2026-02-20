@@ -1,53 +1,81 @@
 package com.dump2plan.vaadin;
 
-import com.dump2plan.service.PlanExportService;
+import com.embabel.agent.chat.AssistantMessage;
 import com.embabel.agent.chat.Chatbot;
 import com.embabel.agent.chat.ChatSession;
+import com.embabel.agent.chat.Message;
 import com.embabel.agent.core.UserMessage;
+import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.Scroller;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
 import jakarta.annotation.security.PermitAll;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Main chat interface for dump2plan. Follows the urbot/stashbot ChatView pattern:
+ * background thread processing, BlockingQueue response handling, VaadinOutputChannel
+ * for real-time progress, and session persistence via VaadinSession.
+ */
 @Route("")
+@PageTitle("dump2plan")
 @PermitAll
 public class ChatView extends VerticalLayout {
 
-    private final Chatbot chatbot;
-    private final PlanExportService exportService;
-    private final VerticalLayout messagesLayout;
-    private final TextArea inputArea;
+    private static final Logger log = LoggerFactory.getLogger(ChatView.class);
+    private static final int RESPONSE_TIMEOUT_SECONDS = 120;
+    private static final String SESSION_DATA_KEY = "dump2plan.sessionData";
 
-    public ChatView(Chatbot chatbot, PlanExportService exportService) {
+    private final Chatbot chatbot;
+    private final VerticalLayout messagesLayout;
+    private final Scroller messagesScroller;
+    private final TextArea inputArea;
+    private final Button sendButton;
+
+    record SessionData(ChatSession chatSession, BlockingQueue<Message> responseQueue) {}
+
+    public ChatView(Chatbot chatbot) {
         this.chatbot = chatbot;
-        this.exportService = exportService;
 
         setSizeFull();
-        setPadding(true);
+        setPadding(false);
         setSpacing(false);
 
-        var header = new H2("dump2plan");
+        // Header
+        var title = new H3("dump2plan");
+        title.addClassName("chat-title");
+        var header = new HorizontalLayout(title);
+        header.setWidthFull();
+        header.setPadding(true);
         header.addClassName("chat-header");
 
+        // Messages area
         messagesLayout = new VerticalLayout();
         messagesLayout.setWidthFull();
-        messagesLayout.setPadding(false);
+        messagesLayout.setPadding(true);
         messagesLayout.setSpacing(true);
         messagesLayout.addClassName("chat-messages");
 
-        var scroller = new Scroller(messagesLayout);
-        scroller.setSizeFull();
-        scroller.setScrollDirection(Scroller.ScrollDirection.VERTICAL);
-        scroller.addClassName("chat-scroller");
+        messagesScroller = new Scroller(messagesLayout);
+        messagesScroller.setSizeFull();
+        messagesScroller.setScrollDirection(Scroller.ScrollDirection.VERTICAL);
+        messagesScroller.addClassName("chat-scroller");
 
+        // Input area
         inputArea = new TextArea();
         inputArea.setWidthFull();
         inputArea.setPlaceholder("Paste your brain dump here...");
@@ -55,22 +83,32 @@ public class ChatView extends VerticalLayout {
         inputArea.setMaxHeight("200px");
         inputArea.addClassName("chat-input");
 
-        var sendButton = new Button("Send", e -> sendMessage());
+        sendButton = new Button("Send", e -> sendMessage());
         sendButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         sendButton.addClickShortcut(Key.ENTER);
 
         var inputLayout = new HorizontalLayout(inputArea, sendButton);
         inputLayout.setWidthFull();
+        inputLayout.setPadding(true);
         inputLayout.setAlignItems(Alignment.END);
         inputLayout.expand(inputArea);
+        inputLayout.addClassName("chat-input-layout");
 
-        addMessageBubble("agent",
-            "Welcome to **dump2plan**! Paste your brain dump below and I'll " +
-            "transform it into a structured project plan. I may ask a few " +
-            "clarifying questions before generating the plan.");
+        add(header, messagesScroller, inputLayout);
+        expand(messagesScroller);
+    }
 
-        add(header, scroller, inputLayout);
-        expand(scroller);
+    @Override
+    protected void onAttach(AttachEvent attachEvent) {
+        super.onAttach(attachEvent);
+        restorePreviousMessages();
+        if (messagesLayout.getComponentCount() == 0) {
+            messagesLayout.add(ChatMessageBubble.assistant(
+                "Welcome to **dump2plan**! Paste your brain dump below and I'll " +
+                "transform it into a structured project plan. I may ask a few " +
+                "clarifying questions before generating the plan."
+            ));
+        }
     }
 
     private void sendMessage() {
@@ -80,41 +118,95 @@ public class ChatView extends VerticalLayout {
         }
 
         inputArea.clear();
-        inputArea.setEnabled(false);
-        addMessageBubble("user", text);
+        setInputEnabled(false);
+        messagesLayout.add(ChatMessageBubble.user(text));
+        scrollToBottom();
 
         var ui = UI.getCurrent();
+        var sessionData = getOrCreateSessionData();
+
         new Thread(() -> {
             try {
-                var session = getOrCreateSession();
-                session.onUserMessage(new UserMessage(text));
+                sessionData.chatSession().onUserMessage(new UserMessage(text));
+
+                // Poll for response with timeout (urbot/stashbot pattern)
+                var response = sessionData.responseQueue()
+                    .poll(RESPONSE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
                 ui.access(() -> {
-                    addMessageBubble("agent", "Processing your brain dump...");
-                    inputArea.setEnabled(true);
-                    inputArea.focus();
+                    if (response != null) {
+                        messagesLayout.add(ChatMessageBubble.assistant(response.getContent()));
+                    } else {
+                        messagesLayout.add(ChatMessageBubble.error(
+                            "Response timed out. Please try again."));
+                    }
+                    setInputEnabled(true);
+                    scrollToBottom();
+                });
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                ui.access(() -> {
+                    messagesLayout.add(ChatMessageBubble.error(
+                        "Request was interrupted. Please try again."));
+                    setInputEnabled(true);
                 });
             } catch (Exception e) {
+                log.error("Error processing message", e);
                 ui.access(() -> {
-                    addMessageBubble("agent",
-                        "Sorry, an error occurred: " + e.getMessage());
-                    inputArea.setEnabled(true);
+                    messagesLayout.add(ChatMessageBubble.error(
+                        "An error occurred: " + e.getMessage()));
+                    setInputEnabled(true);
                 });
             }
         }).start();
     }
 
-    private void addMessageBubble(String role, String content) {
-        messagesLayout.add(new ChatMessageBubble(role, content));
+    private void setInputEnabled(boolean enabled) {
+        inputArea.setEnabled(enabled);
+        sendButton.setEnabled(enabled);
+        if (enabled) {
+            inputArea.focus();
+        }
     }
 
-    private ChatSession getOrCreateSession() {
-        var session = VaadinSession.getCurrent()
-            .getAttribute(ChatSession.class);
-        if (session == null) {
-            session = chatbot.createSession();
-            VaadinSession.getCurrent().setAttribute(ChatSession.class, session);
+    private void scrollToBottom() {
+        messagesScroller.getElement().executeJs(
+            "setTimeout(() => { this.scrollTop = this.scrollHeight; }, 50);"
+        );
+    }
+
+    private void restorePreviousMessages() {
+        var sessionData = (SessionData) VaadinSession.getCurrent()
+            .getAttribute(SESSION_DATA_KEY);
+        if (sessionData == null) {
+            return;
         }
-        return session;
+
+        var conversation = sessionData.chatSession().getConversation();
+        if (conversation == null) {
+            return;
+        }
+
+        for (var message : conversation.getMessages()) {
+            if (message instanceof UserMessage userMsg) {
+                messagesLayout.add(ChatMessageBubble.user(userMsg.getContent()));
+            } else if (message instanceof AssistantMessage assistantMsg) {
+                messagesLayout.add(ChatMessageBubble.assistant(assistantMsg.getContent()));
+            }
+        }
+    }
+
+    private SessionData getOrCreateSessionData() {
+        var sessionData = (SessionData) VaadinSession.getCurrent()
+            .getAttribute(SESSION_DATA_KEY);
+        if (sessionData == null) {
+            var responseQueue = new ArrayBlockingQueue<Message>(10);
+            var outputChannel = new VaadinOutputChannel(
+                UI.getCurrent(), messagesLayout, responseQueue);
+            var chatSession = chatbot.createSession(outputChannel);
+            sessionData = new SessionData(chatSession, responseQueue);
+            VaadinSession.getCurrent().setAttribute(SESSION_DATA_KEY, sessionData);
+        }
+        return sessionData;
     }
 }
