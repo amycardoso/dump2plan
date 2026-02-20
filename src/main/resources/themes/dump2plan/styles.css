@@ -1,0 +1,16 @@
+html {
+    --lumo-primary-color: hsl(220, 90%, 52%);
+    --lumo-primary-text-color: hsl(220, 90%, 52%);
+    --lumo-border-radius-m: 8px;
+    --lumo-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.login-view {
+    background: var(--lumo-shade-5pct);
+}
+
+.login-view h1 {
+    color: var(--lumo-primary-text-color);
+    font-size: var(--lumo-font-size-xxxl);
+    margin-bottom: var(--lumo-space-l);
+}

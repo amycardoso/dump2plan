@@ -1,0 +1,46 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: dump2plan
+
+dump2plan:
+  chat:
+    llm: "claude-sonnet-4-5"
+    show-prompts: false
+    show-responses: false
+
+  actors:
+    analyzer:
+      persona: "analyzer"
+      llm: "claude-haiku-4-5"
+    planner:
+      persona: "planner"
+      llm: "claude-sonnet-4-5"
+    reviewer:
+      persona: "reviewer"
+      llm: "claude-sonnet-4-5"
+
+  persona: "planner"
+  objective: "brain-dump-to-plan"
+
+embabel:
+  agent:
+    platform:
+      http-client:
+        read-timeout: 10m
+
+vaadin:
+  launch-browser: true
+  pnpm:
+    enable: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
