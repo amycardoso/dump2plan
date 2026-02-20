@@ -26,6 +26,8 @@ dump2plan:
   objective: "brain-dump-to-plan"
 
 embabel:
+  models:
+    default-llm: "${EMBABEL_DEFAULT_LLM:gemini-2.5-flash}"
   agent:
     platform:
       http-client:
@@ -46,11 +48,15 @@ management:
       show-details: when-authorized
 
 ---
-# Gemini - auto-activated with: export GEMINI_API_KEY=your-key
+# Gemini - activated with: ./mvnw spring-boot:run -Dspring.profiles.active=gemini
 spring:
   config:
     activate:
       on-profile: gemini
+
+embabel:
+  models:
+    default-llm: "gemini-2.5-flash"
 
 dump2plan:
   chat:
