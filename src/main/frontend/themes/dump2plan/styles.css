@@ -245,7 +245,13 @@ html {
     background: var(--lumo-contrast-5pct);
 }
 
+/* Reset button */
+.reset-button {
+    flex-shrink: 0;
+}
+
 /* Export buttons */
 .export-buttons {
     padding: var(--lumo-space-s) 0;
+    max-width: 80%;
 }

@@ -1,6 +1,7 @@
 package com.dump2plan.agent;
 
 import com.dump2plan.Dump2PlanProperties;
+import com.embabel.agent.api.event.progress.OutputChannelHighlightingEventListener;
 import com.embabel.agent.core.AgentPlatform;
 import com.embabel.agent.core.Verbosity;
 import com.embabel.chat.Chatbot;
@@ -8,6 +9,8 @@ import com.embabel.chat.agent.AgentProcessChatbot;
 import com.embabel.chat.support.InMemoryConversationFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
 
 @Configuration
 public class PlannerConfiguration {
@@ -19,7 +22,11 @@ public class PlannerConfiguration {
             new InMemoryConversationFactory(),
             new Verbosity()
                 .withShowPrompts(properties.chat().showPrompts())
-                .withShowLlmResponses(properties.chat().showResponses())
+                .withShowLlmResponses(properties.chat().showResponses()),
+            (user, channel) -> List.of(
+                new OutputChannelHighlightingEventListener(
+                    channel, properties.chat().showPrompts())
+            )
         );
     }
 }

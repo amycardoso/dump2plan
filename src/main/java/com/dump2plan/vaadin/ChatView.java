@@ -11,6 +11,7 @@ import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.Scroller;
@@ -33,6 +34,10 @@ public class ChatView extends VerticalLayout {
     private static final Logger log = LoggerFactory.getLogger(ChatView.class);
     private static final int RESPONSE_TIMEOUT_SECONDS = 120;
     private static final String SESSION_DATA_KEY = "dump2plan.sessionData";
+    private static final String WELCOME_MESSAGE =
+        "Welcome to **dump2plan**! Paste your brain dump below and I'll " +
+        "transform it into a structured project plan. I may ask a few " +
+        "clarifying questions before generating the plan.";
 
     private final Chatbot chatbot;
     private final Dump2PlanUserService userService;
@@ -41,7 +46,11 @@ public class ChatView extends VerticalLayout {
     private final TextArea inputArea;
     private final Button sendButton;
 
-    record SessionData(ChatSession chatSession, BlockingQueue<Message> responseQueue) {}
+    record SessionData(
+        ChatSession chatSession,
+        BlockingQueue<Message> responseQueue,
+        BlockingQueue<String> hitlResponseQueue
+    ) {}
 
     public ChatView(Chatbot chatbot, Dump2PlanUserService userService) {
         this.chatbot = chatbot;
@@ -53,9 +62,16 @@ public class ChatView extends VerticalLayout {
 
         var title = new H3("dump2plan");
         title.addClassName("chat-title");
-        var header = new HorizontalLayout(title);
+
+        var resetButton = new Button("New Chat", VaadinIcon.PLUS.create(), e -> resetConversation());
+        resetButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+        resetButton.addClassName("reset-button");
+
+        var header = new HorizontalLayout(title, resetButton);
         header.setWidthFull();
         header.setPadding(true);
+        header.setJustifyContentMode(JustifyContentMode.BETWEEN);
+        header.setAlignItems(Alignment.CENTER);
         header.addClassName("chat-header");
 
         messagesLayout = new VerticalLayout();
@@ -96,11 +112,7 @@ public class ChatView extends VerticalLayout {
         super.onAttach(attachEvent);
         restorePreviousMessages();
         if (messagesLayout.getComponentCount() == 0) {
-            messagesLayout.add(ChatMessageBubble.assistant(
-                "Welcome to **dump2plan**! Paste your brain dump below and I'll " +
-                "transform it into a structured project plan. I may ask a few " +
-                "clarifying questions before generating the plan."
-            ));
+            messagesLayout.add(ChatMessageBubble.assistant(WELCOME_MESSAGE));
         }
     }
 
@@ -118,39 +130,94 @@ public class ChatView extends VerticalLayout {
         var ui = UI.getCurrent();
         var sessionData = getOrCreateSessionData();
 
-        new Thread(() -> {
-            try {
-                sessionData.chatSession().onUserMessage(new UserMessage(text));
+        new Thread(() -> processUserMessage(text, ui, sessionData)).start();
+    }
 
-                var response = sessionData.responseQueue()
-                    .poll(RESPONSE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+    private void processUserMessage(String text, UI ui, SessionData sessionData) {
+        try {
+            sessionData.chatSession().onUserMessage(new UserMessage(text));
+            awaitResponses(ui, sessionData);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            ui.access(() -> {
+                messagesLayout.add(ChatMessageBubble.error(
+                    "Request was interrupted. Please try again."));
+                setInputEnabled(true);
+            });
+        } catch (Exception e) {
+            log.error("Error processing message", e);
+            ui.access(() -> {
+                messagesLayout.add(ChatMessageBubble.error(
+                    "An error occurred: " + e.getMessage()));
+                setInputEnabled(true);
+            });
+        }
+    }
 
+    private void awaitResponses(UI ui, SessionData sessionData) throws InterruptedException {
+        while (true) {
+            var response = sessionData.responseQueue()
+                .poll(RESPONSE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+            if (response == null) {
                 ui.access(() -> {
-                    if (response != null) {
-                        messagesLayout.add(ChatMessageBubble.assistant(response.getContent()));
-                    } else {
+                    messagesLayout.add(ChatMessageBubble.error(
+                        "Response timed out. Please try again."));
+                    setInputEnabled(true);
+                    scrollToBottom();
+                });
+                return;
+            }
+
+            if (response instanceof AssistantMessage assistantMsg
+                    && assistantMsg.getAwaitable() != null) {
+                // HITL: render prompt and wait for user input
+                ui.access(() -> {
+                    var hitlPrompt = HitlPrompt.confirm(
+                        assistantMsg.getContent(),
+                        hitlResponse -> sessionData.hitlResponseQueue().offer(hitlResponse)
+                    );
+                    messagesLayout.add(hitlPrompt);
+                    scrollToBottom();
+                });
+
+                // Block until user submits the HITL response
+                var hitlText = sessionData.hitlResponseQueue()
+                    .poll(RESPONSE_TIMEOUT_SECONDS * 2, TimeUnit.SECONDS);
+
+                if (hitlText == null) {
+                    ui.access(() -> {
                         messagesLayout.add(ChatMessageBubble.error(
-                            "Response timed out. Please try again."));
+                            "HITL response timed out. Please try again."));
+                        setInputEnabled(true);
+                        scrollToBottom();
+                    });
+                    return;
+                }
+
+                // Resume the agent process with the user's response
+                sessionData.chatSession().onUserMessage(new UserMessage(hitlText));
+                // Continue loop to await next response (could be another HITL or final)
+            } else {
+                // Final response — show it and re-enable input
+                var content = response.getContent();
+                ui.access(() -> {
+                    messagesLayout.add(ChatMessageBubble.assistant(content));
+                    if (isPlanResponse(content)) {
+                        messagesLayout.add(new ExportButtons(content));
                     }
                     setInputEnabled(true);
                     scrollToBottom();
                 });
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                ui.access(() -> {
-                    messagesLayout.add(ChatMessageBubble.error(
-                        "Request was interrupted. Please try again."));
-                    setInputEnabled(true);
-                });
-            } catch (Exception e) {
-                log.error("Error processing message", e);
-                ui.access(() -> {
-                    messagesLayout.add(ChatMessageBubble.error(
-                        "An error occurred: " + e.getMessage()));
-                    setInputEnabled(true);
-                });
+                return;
             }
-        }).start();
+        }
+    }
+
+    private boolean isPlanResponse(String content) {
+        return content != null
+            && content.length() > 500
+            && (content.contains("Milestone") || content.contains("## "));
     }
 
     private void setInputEnabled(boolean enabled) {
@@ -159,6 +226,13 @@ public class ChatView extends VerticalLayout {
         if (enabled) {
             inputArea.focus();
         }
+    }
+
+    private void resetConversation() {
+        VaadinSession.getCurrent().setAttribute(SESSION_DATA_KEY, null);
+        messagesLayout.removeAll();
+        messagesLayout.add(ChatMessageBubble.assistant(WELCOME_MESSAGE));
+        setInputEnabled(true);
     }
 
     private void scrollToBottom() {
@@ -193,11 +267,12 @@ public class ChatView extends VerticalLayout {
             .getAttribute(SESSION_DATA_KEY);
         if (sessionData == null) {
             var responseQueue = new ArrayBlockingQueue<Message>(10);
+            var hitlResponseQueue = new ArrayBlockingQueue<String>(1);
             var outputChannel = new VaadinOutputChannel(
                 UI.getCurrent(), messagesLayout, responseQueue);
             var currentUser = userService.getDefaultUser();
             var chatSession = chatbot.createSession(currentUser, outputChannel, null, null);
-            sessionData = new SessionData(chatSession, responseQueue);
+            sessionData = new SessionData(chatSession, responseQueue, hitlResponseQueue);
             VaadinSession.getCurrent().setAttribute(SESSION_DATA_KEY, sessionData);
         }
         return sessionData;
