@@ -1,0 +1,10 @@
+spring:
+  main:
+    web-application-type: none
+  autoconfigure:
+    exclude: com.vaadin.flow.spring.SpringBootAutoConfiguration
+
+dump2plan:
+  chat:
+    show-prompts: false
+    show-responses: false

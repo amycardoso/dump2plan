@@ -1,0 +1,70 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: dump2plan
+
+dump2plan:
+  chat:
+    llm: "claude-sonnet-4-5"
+    show-prompts: false
+    show-responses: false
+
+  actors:
+    analyzer:
+      persona: "analyzer"
+      llm: "claude-haiku-4-5"
+    planner:
+      persona: "planner"
+      llm: "claude-sonnet-4-5"
+    reviewer:
+      persona: "reviewer"
+      llm: "claude-sonnet-4-5"
+
+  persona: "planner"
+  objective: "brain-dump-to-plan"
+
+embabel:
+  models:
+    default-llm: "${EMBABEL_DEFAULT_LLM:gemini-2.5-flash}"
+  agent:
+    platform:
+      http-client:
+        read-timeout: 10m
+
+vaadin:
+  launch-browser: true
+  pnpm:
+    enable: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+---
+# Gemini - activated with: ./mvnw spring-boot:run -Dspring.profiles.active=gemini
+spring:
+  config:
+    activate:
+      on-profile: gemini
+
+embabel:
+  models:
+    default-llm: "gemini-2.5-flash"
+
+dump2plan:
+  chat:
+    llm: "gemini-2.5-flash"
+  actors:
+    analyzer:
+      llm: "gemini-2.5-flash"
+    planner:
+      llm: "gemini-2.5-pro"
+    reviewer:
+      llm: "gemini-2.5-pro"
