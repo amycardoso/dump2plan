@@ -15,6 +15,7 @@ public class ChatMessageBubble extends Div {
     private static final Parser MARKDOWN_PARSER = Parser.builder().build();
     private static final HtmlRenderer HTML_RENDERER = HtmlRenderer.builder()
         .escapeHtml(true)
+        .sanitizeUrls(true)
         .build();
 
     private ChatMessageBubble(String senderName, String text, boolean isUser) {
@@ -59,7 +60,7 @@ public class ChatMessageBubble extends Div {
         return div;
     }
 
-    static String renderMarkdown(String markdown) {
+    public static String renderMarkdown(String markdown) {
         if (markdown == null || markdown.isBlank()) {
             return "";
         }
