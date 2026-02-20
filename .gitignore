@@ -50,6 +50,7 @@ release.properties
 # Vaadin
 node_modules/
 frontend/generated/
+src/main/frontend/generated/
 vite.generated.ts
 vite.config.ts
 tsconfig.json
@@ -59,3 +60,5 @@ package-lock.json
 pnpm-lock.yaml
 webpack.config.js
 webpack.generated.js
+.npmrc
+.vaadin-node-tasks.lock
