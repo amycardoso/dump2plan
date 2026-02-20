@@ -8,8 +8,9 @@ import com.dump2plan.model.StructuredPlan;
 import com.embabel.agent.api.annotation.Action;
 import com.embabel.agent.api.annotation.AchievesGoal;
 import com.embabel.agent.api.annotation.Agent;
-import com.embabel.agent.api.common.OperationContext;
-import com.embabel.agent.core.UserInput;
+import com.embabel.agent.api.common.Ai;
+import com.embabel.agent.core.hitl.WaitFor;
+import com.embabel.agent.domain.io.UserInput;
 
 @Agent(description = "Transforms unstructured brain dumps into structured project plans")
 public class BrainDumpPlannerAgent {
@@ -21,8 +22,8 @@ public class BrainDumpPlannerAgent {
     }
 
     @Action(cost = 0.1)
-    public ExtractedIdeas analyzeInput(UserInput input, OperationContext ctx) {
-        return ctx.ai()
+    public ExtractedIdeas analyzeInput(UserInput input, Ai ai) {
+        return ai
             .withLlm(properties.actors().analyzer().llm())
             .createObject(
                 "Analyze this brain dump. Extract topics, action items, constraints, " +
@@ -33,8 +34,8 @@ public class BrainDumpPlannerAgent {
     }
 
     @Action(cost = 0.05)
-    public ClarifiedContext gatherContext(ExtractedIdeas ideas, OperationContext ctx) {
-        return ctx.fromForm(
+    public ClarifiedContext gatherContext(ExtractedIdeas ideas) {
+        return WaitFor.formSubmission(
             "Before I create your plan, I have a few questions:\n" +
             String.join("\n", ideas.clarifyingQuestions()),
             ClarifiedContext.class
@@ -45,8 +46,8 @@ public class BrainDumpPlannerAgent {
     public ProjectStructure structurePlan(
             ExtractedIdeas ideas,
             ClarifiedContext context,
-            OperationContext ctx) {
-        return ctx.ai()
+            Ai ai) {
+        return ai
             .withLlm(properties.actors().planner().llm())
             .createObject(
                 "Create a structured project plan with milestones and tasks based on " +
@@ -65,8 +66,8 @@ public class BrainDumpPlannerAgent {
     public StructuredPlan finalizePlan(
             ProjectStructure structure,
             ExtractedIdeas ideas,
-            OperationContext ctx) {
-        return ctx.ai()
+            Ai ai) {
+        return ai
             .withLlm(properties.actors().reviewer().llm())
             .createObject(
                 "Finalize this project plan: validate completeness, prioritize tasks, " +

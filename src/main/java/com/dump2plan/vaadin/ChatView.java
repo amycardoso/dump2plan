@@ -1,10 +1,12 @@
 package com.dump2plan.vaadin;
 
-import com.embabel.agent.chat.AssistantMessage;
-import com.embabel.agent.chat.Chatbot;
-import com.embabel.agent.chat.ChatSession;
-import com.embabel.agent.chat.Message;
-import com.embabel.agent.core.UserMessage;
+import com.dump2plan.user.Dump2PlanUser;
+import com.dump2plan.user.Dump2PlanUserService;
+import com.embabel.chat.AssistantMessage;
+import com.embabel.chat.Chatbot;
+import com.embabel.chat.ChatSession;
+import com.embabel.chat.Message;
+import com.embabel.chat.UserMessage;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.UI;
@@ -26,11 +28,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Main chat interface for dump2plan. Follows the urbot/stashbot ChatView pattern:
- * background thread processing, BlockingQueue response handling, VaadinOutputChannel
- * for real-time progress, and session persistence via VaadinSession.
- */
 @Route("")
 @PageTitle("dump2plan")
 @PermitAll
@@ -41,6 +38,7 @@ public class ChatView extends VerticalLayout {
     private static final String SESSION_DATA_KEY = "dump2plan.sessionData";
 
     private final Chatbot chatbot;
+    private final Dump2PlanUserService userService;
     private final VerticalLayout messagesLayout;
     private final Scroller messagesScroller;
     private final TextArea inputArea;
@@ -48,14 +46,14 @@ public class ChatView extends VerticalLayout {
 
     record SessionData(ChatSession chatSession, BlockingQueue<Message> responseQueue) {}
 
-    public ChatView(Chatbot chatbot) {
+    public ChatView(Chatbot chatbot, Dump2PlanUserService userService) {
         this.chatbot = chatbot;
+        this.userService = userService;
 
         setSizeFull();
         setPadding(false);
         setSpacing(false);
 
-        // Header
         var title = new H3("dump2plan");
         title.addClassName("chat-title");
         var header = new HorizontalLayout(title);
@@ -63,7 +61,6 @@ public class ChatView extends VerticalLayout {
         header.setPadding(true);
         header.addClassName("chat-header");
 
-        // Messages area
         messagesLayout = new VerticalLayout();
         messagesLayout.setWidthFull();
         messagesLayout.setPadding(true);
@@ -75,7 +72,6 @@ public class ChatView extends VerticalLayout {
         messagesScroller.setScrollDirection(Scroller.ScrollDirection.VERTICAL);
         messagesScroller.addClassName("chat-scroller");
 
-        // Input area
         inputArea = new TextArea();
         inputArea.setWidthFull();
         inputArea.setPlaceholder("Paste your brain dump here...");
@@ -129,7 +125,6 @@ public class ChatView extends VerticalLayout {
             try {
                 sessionData.chatSession().onUserMessage(new UserMessage(text));
 
-                // Poll for response with timeout (urbot/stashbot pattern)
                 var response = sessionData.responseQueue()
                     .poll(RESPONSE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
@@ -203,7 +198,8 @@ public class ChatView extends VerticalLayout {
             var responseQueue = new ArrayBlockingQueue<Message>(10);
             var outputChannel = new VaadinOutputChannel(
                 UI.getCurrent(), messagesLayout, responseQueue);
-            var chatSession = chatbot.createSession(outputChannel);
+            Dump2PlanUser currentUser = userService.getCurrentUser();
+            var chatSession = chatbot.createSession(currentUser, outputChannel, null, null);
             sessionData = new SessionData(chatSession, responseQueue);
             VaadinSession.getCurrent().setAttribute(SESSION_DATA_KEY, sessionData);
         }

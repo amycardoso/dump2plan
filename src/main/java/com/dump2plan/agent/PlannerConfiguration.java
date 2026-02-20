@@ -1,17 +1,15 @@
 package com.dump2plan.agent;
 
 import com.dump2plan.Dump2PlanProperties;
-import com.embabel.agent.api.common.AgentPlatform;
-import com.embabel.agent.chat.AgentProcessChatbot;
-import com.embabel.agent.chat.Chatbot;
-import com.embabel.agent.chat.InMemoryConversationFactory;
-import com.embabel.agent.chat.Verbosity;
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import com.embabel.agent.core.AgentPlatform;
+import com.embabel.agent.core.Verbosity;
+import com.embabel.chat.Chatbot;
+import com.embabel.chat.agent.AgentProcessChatbot;
+import com.embabel.chat.support.InMemoryConversationFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@ConfigurationPropertiesScan
 public class PlannerConfiguration {
 
     @Bean

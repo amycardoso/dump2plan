@@ -1,13 +1,13 @@
 package com.dump2plan.agent;
 
 import com.dump2plan.Dump2PlanProperties;
+import com.dump2plan.user.Dump2PlanUser;
 import com.embabel.agent.api.annotation.Action;
 import com.embabel.agent.api.annotation.EmbabelComponent;
 import com.embabel.agent.api.common.ActionContext;
 import com.embabel.agent.api.common.OperationContext;
-import com.embabel.agent.api.identity.User;
-import com.embabel.agent.core.Conversation;
-import com.embabel.agent.core.UserMessage;
+import com.embabel.chat.Conversation;
+import com.embabel.chat.UserMessage;
 
 import java.util.Map;
 
@@ -21,13 +21,17 @@ public class ChatActions {
     }
 
     @Action
-    public User bindUser(OperationContext context) {
-        return context.getProcessContext().getProcessOptions()
+    public Dump2PlanUser bindUser(OperationContext context) {
+        var forUser = context.getProcessContext().getProcessOptions()
             .getIdentities().getForUser();
+        if (forUser instanceof Dump2PlanUser user) {
+            return user;
+        }
+        return null;
     }
 
     @Action(canRerun = true, trigger = UserMessage.class)
-    public void respond(Conversation conversation, User user, ActionContext context) {
+    public void respond(Conversation conversation, Dump2PlanUser user, ActionContext context) {
         var assistantMessage = context.ai()
             .withLlm(properties.chat().llm())
             .rendering("dump2plan")

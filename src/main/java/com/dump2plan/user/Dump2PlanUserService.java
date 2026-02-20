@@ -24,13 +24,29 @@ public class Dump2PlanUserService implements UserService<Dump2PlanUser>, UserDet
     }
 
     @Override
+    public Dump2PlanUser findById(String id) {
+        return users.get(id);
+    }
+
+    @Override
+    public Dump2PlanUser findByUsername(String username) {
+        return users.get(username);
+    }
+
+    @Override
+    public Dump2PlanUser findByEmail(String email) {
+        return users.values().stream()
+            .filter(u -> email.equals(u.getEmail()))
+            .findFirst()
+            .orElse(null);
+    }
+
     public Dump2PlanUser getCurrentUser() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             return null;
         }
-        var username = authentication.getName();
-        return users.get(username);
+        return users.get(authentication.getName());
     }
 
     @Override
@@ -40,7 +56,7 @@ public class Dump2PlanUserService implements UserService<Dump2PlanUser>, UserDet
             throw new UsernameNotFoundException("User not found: " + username);
         }
         return org.springframework.security.core.userdetails.User
-                .withUsername(user.username())
+                .withUsername(user.getUsername())
                 .password(passwordEncoder.encode("password"))
                 .roles(user.role())
                 .build();
